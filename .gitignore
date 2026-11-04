@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment files (keep the example)
+.env
+.env.*
+!.env.example
+
+# Django generated
+*.log
+db.sqlite3
+backend/staticfiles/
+backend/media/
+
+# Frontend (Farheen's React app)
+node_modules/
+dist/
+
+# Local development / editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,21 @@
+# --- Core framework ---
+Django==6.1.2
+djangorestframework==3.18.3
+djangorestframework-simplejwt==5.5.1
+
+# --- API documentation (Swagger UI / ReDoc) ---
+drf-spectacular==0.30.0
+
+# --- Database ---
+psycopg[binary]==3.3.6
+
+# --- Configuration / security ---
+django-cors-headers==4.9.0
+python-decouple==3.8
+
+# --- Real-time (KDS + waiter notifications, Phase 3) ---
+channels==4.3.2
+channels-redis==4.3.0
+
+# --- Production server (Linux/Docker only; not used on Windows dev) ---
+gunicorn==26.2.0
