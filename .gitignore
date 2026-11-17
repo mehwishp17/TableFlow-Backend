@@ -31,3 +31,10 @@ dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Old duplicate of the Login API submission (superseded by backend/); never commit
+Backend_Login_API_Submission/
+
+# Temporary files and generated verification output
+*.tmp
+tables-qr-*.pdf

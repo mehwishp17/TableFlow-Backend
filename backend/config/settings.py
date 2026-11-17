@@ -153,6 +153,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Only used by views that opt in (currently the public QR resolver).
+    'DEFAULT_THROTTLE_RATES': {'qr_resolve': '30/min'},
 }
 
 
@@ -176,6 +178,10 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS', default='http://localhost:5173', cast=Csv()
 )
+
+
+# Base URL of the React frontend; table QR codes point to <base>/menu?...
+FRONTEND_BASE_URL = config('FRONTEND_BASE_URL', default='http://localhost:5173')
 
 
 # Email

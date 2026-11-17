@@ -9,6 +9,10 @@ drf-spectacular==0.30.0
 # --- Database ---
 psycopg[binary]==3.3.6
 
+# --- Table QR code PDF export ---
+reportlab==5.1.0
+pillow==13.0.0
+
 # --- Configuration / security ---
 django-cors-headers==4.9.0
 python-decouple==3.8
