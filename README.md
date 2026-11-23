@@ -140,9 +140,73 @@ PATCH /api/v1/tables/1/status
 `Cleaning`. `table_number` is a label (letters, digits, `.`, `_`, `-`) that must be unique per
 restaurant, ignoring case. The QR token is never returned by the table API.
 
+## Orders & Kitchen (KDS)
+
+All routes are under `/api/v1`, answer in the `{ data, error, status }` envelope and need a JWT.
+
+| Method & path | Admin | Staff | Kitchen | Platform |
+|---------------|-------|-------|---------|----------|
+| `GET /orders` | all orders of the restaurant | all orders of the restaurant (not only their own) | active queue, oldest first | orders of all restaurants |
+| `POST /orders` | yes | yes | 403 | 403 |
+| `PATCH /orders/{order_id}/items/{item_id}` | 403 (view-only KDS) | 403 | yes | 403 (no KDS) |
+
+Without a valid token every route answers 401.
+
+**Create an order**
+
+```
+POST /api/v1/orders
+{"order_type": "Dine-In", "table": 3, "items": [{"menu_item": 5, "quantity": 2}]}
+
+POST /api/v1/orders          (Parcel: no table)
+{"order_type": "Parcel", "items": [{"menu_item": 5, "quantity": 1}]}
+```
+
+The restaurant and waiter come from the logged-in user. A Dine-In order needs a table of the same
+restaurant and a Parcel order must not have one. Dishes must exist in the restaurant and be
+available; each dish may appear once (raise `quantity` instead; 1 to 99). The unit price is copied
+from the menu when the order is created, `total_price` is the sum of price x quantity, and the
+order and its items are saved in one transaction. The table status is not changed. Order ids look
+like `ORD-7K3F9Q2X`.
+
+**List orders** — query parameters:
+
+| Parameter | Meaning |
+|-----------|---------|
+| `status` | `Pickup`, `Processed` or `Complete`: orders with at least one item in that state |
+| `active` | `true` (default): orders with an item not yet `Complete`; `false`: finished orders; `all`: both. Kitchen users always get `true` |
+| `table` | table id |
+| `date_from`, `date_to` | `YYYY-MM-DD`, inclusive, server time zone (UTC) |
+| `search` | matches the order id or the table number |
+
+**How an order's state is represented.** There is no overall order status. Every order has
+`is_active` (true while any item is not `Complete`) and `status_summary`, the number of its items in
+each documented state, e.g. `{"Pickup": 1, "Processed": 0, "Complete": 1}`. An order with items in
+several states therefore matches several `status=` filters. Each item has `kitchen_status`
+(`Pickup` when created).
+
+```
+PATCH /api/v1/orders/ORD-7K3F9Q2X/items/11
+{"kitchen_status": "Processed"}
+```
+
+Any of the three values may be chosen (the KDS shows a dropdown). The response is the whole order.
+An item that does not belong to the order, or an order of another restaurant, gives 404.
+
+**Notes**
+
+- `orders.restaurant` is not in section 34 of the specification. It was added so that every order,
+  including Parcel orders without a table, belongs to exactly one restaurant (tenant isolation).
+- Staff can create an order for any table of their own restaurant and see all active orders of
+  their own restaurant, not only the ones they created. There is no table-assignment model
+  (confirmed by the team lead). Orders of other restaurants are never visible.
+- The KDS is meant to poll `GET /orders` every 15 seconds. WebSockets (Django Channels) are not
+  set up and not implemented.
+- `POST /kitchen/call-staff` (section 32) is not implemented yet; it needs its own task.
+
 ## Testing
 
-Automated (no PostgreSQL needed; in-memory SQLite): 114 tests, run with
+Automated (no PostgreSQL needed; in-memory SQLite): 199 tests (115 for Login, error logging, Menu, Tables and QR, 84 for Orders and Kitchen), run with
 `python manage.py test --settings=config.settings_test`.
 
 Manual end-to-end check against PostgreSQL 18 (`tableflow_db`): 79 of 79 checks passed
@@ -153,7 +217,9 @@ applied to PostgreSQL. The automated suite itself has not been run on PostgreSQL
 ## Status
 
 Implemented: custom User model, Restaurant model, JWT Login API, Menu APIs, Table APIs,
-QR PDF export and the public QR resolver. Orders, Kitchen, Analytics and Printing are pending.
+QR PDF export, the public QR resolver, Order APIs and the Kitchen item-status API. The Call Staff
+route, Analytics and Printing are pending. The Orders migration (`orders.0001`) is not applied to any
+PostgreSQL database yet, and the Orders and Kitchen APIs have only been tested on SQLite.
 
 Open items before production:
 
