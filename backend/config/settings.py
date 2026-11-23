@@ -196,3 +196,33 @@ MAILERS = {
 
 # Custom user model (PDF section 34). Must be set before the first migration.
 AUTH_USER_MODEL = 'accounts.User'
+
+
+# Logging
+# By default Django prints NO tracebacks when DEBUG is off, so an unhandled error in
+# production shows up only as a bare "500" line in the Render logs. This sends every
+# unhandled server error (HTTP 5xx) of a request, with its traceback, to the console.
+# Only the request path, the error and the code location are logged: request bodies,
+# headers, passwords and tokens are NOT part of the log record. 4xx responses (e.g.
+# wrong password) are not logged.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {'format': '%(asctime)s %(levelname)s %(name)s: %(message)s'},
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stdout',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

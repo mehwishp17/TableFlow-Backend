@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
@@ -129,6 +131,32 @@ class ProtectedEndpointTests(TestCase):
         token = RefreshToken.for_user(self.user).access_token
         request = self.factory.get('/', HTTP_AUTHORIZATION=f'Bearer {token}x')
         self.assertEqual(self.Probe.as_view()(request).status_code, 401)
+
+
+class ServerErrorLoggingTests(APITestCase):
+    """A crash inside login must leave a traceback in the server log (so it shows up
+    in Render's logs) without leaking the submitted credentials."""
+
+    def test_unhandled_login_error_is_logged_without_credentials(self):
+        self.client.raise_request_exception = False
+        with mock.patch('accounts.views.authenticate', side_effect=RuntimeError('boom')):
+            with self.assertLogs('django.request', level='ERROR') as logs:
+                response = self.client.post(
+                    reverse('auth-login'),
+                    {'id': 'admin1', 'password': PASSWORD, 'role': 'Admin'},
+                    format='json',
+                )
+        self.assertEqual(response.status_code, 500)
+        output = '\n'.join(self.format_logs(logs))
+        self.assertIn('Internal Server Error: /api/v1/auth/login', output)
+        self.assertIn('RuntimeError: boom', output)  # the traceback is there
+        self.assertNotIn(PASSWORD, output)
+
+    @staticmethod
+    def format_logs(logs):
+        import logging
+        formatter = logging.Formatter('%(message)s')
+        return [formatter.format(record) for record in logs.records]
 
 
 class UserModelTests(TestCase):
