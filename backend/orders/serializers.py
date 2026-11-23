@@ -112,7 +112,7 @@ class OrderFilterSerializer(serializers.Serializer):
     active = serializers.ChoiceField(
         choices=['true', 'false', 'all'], required=False, default='true',
         help_text='`true` (default): orders with an item not yet Complete. `false`: finished '
-                  'orders only. `all`: both. Kitchen users always get `true`.',
+                  'orders only. `all`: both. Kitchen and Staff users always get `true`.',
     )
     table = serializers.IntegerField(required=False, min_value=1, help_text='Table id.')
     date_from = serializers.DateField(required=False, help_text='YYYY-MM-DD, inclusive.')

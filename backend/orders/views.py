@@ -20,7 +20,7 @@ class OrderListCreateView(EnvelopeMixin, APIView):
         tags=['Orders'], summary='List live orders',
         description=(
             'Roles and what they see: **Admin** all orders of the restaurant; **Staff** all '
-            'orders of their own restaurant, whoever created them; **Kitchen** the active '
+            'active orders of their own restaurant, whoever created them (never finished ones); **Kitchen** the active '
             'queue of the restaurant, oldest first; **Platform** orders of all restaurants '
             '(read only).\n\n'
             '**Status:** there is no overall order status. Every order has `is_active` (true '

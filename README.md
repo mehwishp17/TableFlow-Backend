@@ -146,7 +146,7 @@ All routes are under `/api/v1`, answer in the `{ data, error, status }` envelope
 
 | Method & path | Admin | Staff | Kitchen | Platform |
 |---------------|-------|-------|---------|----------|
-| `GET /orders` | all orders of the restaurant | all orders of the restaurant (not only their own) | active queue, oldest first | orders of all restaurants |
+| `GET /orders` | all orders of the restaurant | all active orders of the restaurant (not only their own; never finished ones) | active queue, oldest first | orders of all restaurants |
 | `POST /orders` | yes | yes | 403 | 403 |
 | `PATCH /orders/{order_id}/items/{item_id}` | 403 (view-only KDS) | 403 | yes | 403 (no KDS) |
 
@@ -174,7 +174,7 @@ like `ORD-7K3F9Q2X`.
 | Parameter | Meaning |
 |-----------|---------|
 | `status` | `Pickup`, `Processed` or `Complete`: orders with at least one item in that state |
-| `active` | `true` (default): orders with an item not yet `Complete`; `false`: finished orders; `all`: both. Kitchen users always get `true` |
+| `active` | `true` (default): orders with an item not yet `Complete`; `false`: finished orders; `all`: both. Kitchen and Staff users always get `true` |
 | `table` | table id |
 | `date_from`, `date_to` | `YYYY-MM-DD`, inclusive, server time zone (UTC) |
 | `search` | matches the order id or the table number |
@@ -198,7 +198,8 @@ An item that does not belong to the order, or an order of another restaurant, gi
 - `orders.restaurant` is not in section 34 of the specification. It was added so that every order,
   including Parcel orders without a table, belongs to exactly one restaurant (tenant isolation).
 - Staff can create an order for any table of their own restaurant and see all active orders of
-  their own restaurant, not only the ones they created. There is no table-assignment model
+  their own restaurant, not only the ones they created. Staff never see finished orders, even
+  with `active=all` or `active=false`. There is no table-assignment model
   (confirmed by the team lead). Orders of other restaurants are never visible.
 - The KDS is meant to poll `GET /orders` every 15 seconds. WebSockets (Django Channels) are not
   set up and not implemented.

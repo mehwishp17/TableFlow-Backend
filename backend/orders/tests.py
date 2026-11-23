@@ -330,7 +330,17 @@ class OrderListTests(OrderFixtureMixin, APITestCase):
     def test_completed_orders_are_not_in_the_default_staff_list(self):
         self.assertNotIn(self.o3.pk, self.ids(self.get(self.staff1)))
         self.assertNotIn(self.o3.pk, self.ids(self.get(self.staff1, active='true')))
-        self.assertEqual(self.ids(self.get(self.staff1, active='false')), [self.o3.pk])
+        # Staff cannot widen the view to finished orders, whatever they ask for
+        for active in ('false', 'all', 'true'):
+            with self.subTest(active=active):
+                for user in (self.staff1, self.staff1b):
+                    r = self.get(user, active=active)
+                    self.assertEqual(r.status_code, 200)
+                    self.assertEqual(self.ids(r), [self.o2.pk, self.o1.pk], user.id)
+        # the status filter cannot be used to reach finished orders either
+        self.assertEqual(self.ids(self.get(self.staff1, status='Complete', active='all')), [])
+        # Admin keeps the full history, unchanged
+        self.assertEqual(self.ids(self.get(self.admin1, active='false')), [self.o3.pk])
         # finishing o1 removes it from the other waiter's list too
         self.o1.items.update(kitchen_status='Complete')
         self.assertEqual(self.ids(self.get(self.staff1b)), [self.o2.pk])

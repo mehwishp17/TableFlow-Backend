@@ -106,8 +106,10 @@ class OrderService:
             order=OuterRef('pk')).exclude(kitchen_status=OrderItem.KitchenStatus.COMPLETE)
         qs = qs.annotate(active_flag=Exists(open_items))
 
-        if user.role == User.Role.KITCHEN:
-            active = 'true'                              # the kitchen only sees its queue
+        if user.role in (User.Role.KITCHEN, User.Role.STAFF):
+            # The kitchen only sees its queue and Staff only see active orders (PDF
+            # section 6); neither can widen the view to finished orders.
+            active = 'true'
         if active == 'true':
             qs = qs.filter(active_flag=True)
         elif active == 'false':
