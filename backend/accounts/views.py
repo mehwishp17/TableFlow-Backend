@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import LoginSerializer
+from .services import PresenceService
 
 
 def success(data, http_status=status.HTTP_200_OK):
@@ -154,6 +155,8 @@ class LoginView(APIView):
                 status.HTTP_403_FORBIDDEN,
             )
 
+        PresenceService.mark_online(user)  # login: the user now counts as online
+
         refresh = RefreshToken.for_user(user)
         refresh['role'] = user.role  # custom claim; the access token inherits it
         return success(
@@ -164,3 +167,35 @@ class LoginView(APIView):
                 'refresh': str(refresh),
             }
         )
+
+
+@extend_schema(
+    tags=['Auth'],
+    summary='Log out (marks the user offline)',
+    description=(
+        'Any authenticated role. Clears the user\'s online flag, so the user disappears from '
+        '`GET /api/v1/staff/online/` immediately. Tokens are stateless JWTs, so the client '
+        'must also discard its access and refresh tokens. Requires a JWT bearer token.'
+    ),
+    request=None,
+    responses={
+        200: OpenApiResponse(
+            description='Logged out.',
+            examples=[
+                OpenApiExample(
+                    'Logged out',
+                    value={'data': {'logged_out': True}, 'error': None, 'status': 'success'},
+                    response_only=True,
+                    status_codes=['200'],
+                )
+            ],
+        ),
+        401: OpenApiResponse(description='Missing, invalid or expired JWT access token.'),
+    },
+)
+class LogoutView(APIView):
+    """POST /api/v1/auth/logout"""
+
+    def post(self, request):
+        PresenceService.mark_offline(request.user)
+        return success({'logged_out': True})

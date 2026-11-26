@@ -87,3 +87,15 @@ class OrderFixtureMixin:
     @staticmethod
     def ids(response):
         return [o['id'] for o in response.json()['data']]
+
+
+def go_online(*users):
+    """Make users count as online right now (login flag set, just seen)."""
+    from django.utils import timezone
+
+    from accounts.models import User
+
+    now = timezone.now()
+    for user in users:
+        User.objects.filter(pk=user.pk).update(is_online=True, last_seen=now)
+        user.is_online, user.last_seen = True, now

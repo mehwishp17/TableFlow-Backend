@@ -12,7 +12,9 @@ class UserManager(BaseUserManager):
             raise ValueError('Users must have an id.')
         user = self.model(id=id, **extra_fields)
         user.set_password(password)  # hashes the password (PBKDF2 by default)
-        user.save(using=self._db)
+        # Insert only: ids are chosen by the caller, so a plain save() would UPDATE (and
+        # silently take over) an existing account with the same id.
+        user.save(using=self._db, force_insert=True)
         return user
 
     def create_superuser(self, id, password=None, **extra_fields):
@@ -46,7 +48,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         related_name='users',
     )
     role = models.CharField(max_length=20, choices=Role.choices)
+    # Presence (see accounts.services.PresenceService): `is_online` is set at login and
+    # cleared at logout; `last_seen` is refreshed by authenticated API requests. A user
+    # only counts as online while BOTH say so (flag set and recent activity).
     is_online = models.BooleanField(default=False)
+    last_seen = models.DateTimeField(null=True, blank=True, editable=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  # may open Django admin
 
