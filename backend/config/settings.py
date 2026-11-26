@@ -156,6 +156,14 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # Only used by views that opt in (currently the public QR resolver).
     'DEFAULT_THROTTLE_RATES': {'qr_resolve': '30/min', 'customer_call': '30/min'},
+    # How many trusted reverse proxies sit in front of the app. The throttles take the client
+    # address from X-Forwarded-For, counting this many entries from the right. Left unset,
+    # DRF would key on the whole header, which a client controls.
+    # The default of 1 is an ASSUMPTION, not verified on Render: check it after deploying
+    # (see the README, "Rate limiting behind a proxy"). Too low: unrelated clients can share
+    # a limit. Too high: a client may be able to choose the address and avoid the limit.
+    # 0 = no proxy (use the socket address; local development with `runserver`).
+    'NUM_PROXIES': config('NUM_PROXIES', default=1, cast=int),
 }
 
 
