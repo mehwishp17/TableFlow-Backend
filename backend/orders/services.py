@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from accounts.models import User
+from analytics.services import ScoreService
 from menus.models import MenuItem
 from tables.models import Table
 
@@ -68,6 +69,8 @@ class OrderService:
                           price=menu_items[pk].price)
                 for pk, qty in wanted.items()
             ])
+            # Waiter score: +10 for a Dine-In order, credited once, in this transaction.
+            ScoreService.credit_dine_in_order(order)
         return order
 
     @staticmethod

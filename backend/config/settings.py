@@ -147,14 +147,23 @@ STATIC_URL = 'static/'
 # by default; public ones (e.g. login, menu) must opt out explicitly.
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # JWT, plus a throttled `last_seen` update used for online status.
+        'accounts.authentication.ActivityJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # Only used by views that opt in (currently the public QR resolver).
-    'DEFAULT_THROTTLE_RATES': {'qr_resolve': '30/min'},
+    'DEFAULT_THROTTLE_RATES': {'qr_resolve': '30/min', 'customer_call': '30/min'},
+    # How many trusted reverse proxies sit in front of the app. The throttles take the client
+    # address from X-Forwarded-For, counting this many entries from the right. Left unset,
+    # DRF would key on the whole header, which a client controls.
+    # The default of 1 is an ASSUMPTION, not verified on Render: check it after deploying
+    # (see the README, "Rate limiting behind a proxy"). Too low: unrelated clients can share
+    # a limit. Too high: a client may be able to choose the address and avoid the limit.
+    # 0 = no proxy (use the socket address; local development with `runserver`).
+    'NUM_PROXIES': config('NUM_PROXIES', default=1, cast=int),
 }
 
 
@@ -164,6 +173,15 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'TableFlow Restaurant Management Platform API Documentation',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    # Give the choice lists that share a field name (`status`, `role`) stable names.
+    'ENUM_NAME_OVERRIDES': {
+        'RoleEnum': 'accounts.models.User.Role',
+        'ManagedRoleEnum': 'accounts.staff_serializers.MANAGED_ROLE_CHOICES',
+        'CallStatusEnum': 'kitchen.models.StaffCall.Status',
+        'CallStatusFilterEnum': 'kitchen.call_serializers.CALL_FILTER_STATUSES',
+        'TableStatusEnum': 'tables.models.Table.Status',
+        'KitchenStatusEnum': 'orders.models.OrderItem.KitchenStatus',
+    },
 }
 
 
@@ -178,6 +196,15 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS', default='http://localhost:5173', cast=Csv()
 )
+
+
+# Online status of waiters (accounts.services.PresenceService). A user is "online" while
+# the login flag is set AND an authenticated request was seen within ONLINE_TIMEOUT_SECONDS.
+# Any authenticated API call counts as a heartbeat (e.g. the staff panel polling the call
+# queue), written at most once per ACTIVITY_TOUCH_INTERVAL_SECONDS per user. Keep the
+# timeout comfortably larger than the clients' polling interval (the KDS polls every 15 s).
+ONLINE_TIMEOUT_SECONDS = config('ONLINE_TIMEOUT_SECONDS', default=120, cast=int)
+ACTIVITY_TOUCH_INTERVAL_SECONDS = config('ACTIVITY_TOUCH_INTERVAL_SECONDS', default=30, cast=int)
 
 
 # Base URL of the React frontend; table QR codes point to <base>/menu?...

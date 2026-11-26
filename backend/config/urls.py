@@ -32,4 +32,10 @@ urlpatterns = [
     path('api/v1/', include('tables.urls')),
     path('api/v1/', include('orders.urls')),
     path('api/v1/', include('kitchen.urls')),
+    # Waiter calls live in kitchen.urls (/calls/). The scorecard routes must come before
+    # the generic /staff/<id>/ route, so analytics is included first.
+    path('api/v1/', include('analytics.urls')),
+    path('api/v1/staff/', include('accounts.staff_urls')),
+    path('api/v1/', include('restaurants.urls')),
+    path('api/v1/', include('printing.urls')),
 ]

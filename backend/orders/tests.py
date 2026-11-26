@@ -10,6 +10,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
+from analytics.models import ScoreEvent
 from menus.models import MenuItem
 from orders.models import Order, OrderItem
 from orders.services import OrderService, generate_order_id
@@ -476,6 +477,8 @@ class OrderListTests(OrderFixtureMixin, APITestCase):
         self.assertEqual(o3['status_summary'], {'Pickup': 0, 'Processed': 0, 'Complete': 1})
 
     def test_empty_list(self):
+        # Score credits protect their order (history), so remove them first.
+        ScoreEvent.objects.all().delete()
         Order.objects.all().delete()
         r = self.get(self.admin1)
         self.assertEqual((r.status_code, r.json()['data']), (200, []))
@@ -485,6 +488,7 @@ class OrderListTests(OrderFixtureMixin, APITestCase):
             with CaptureQueriesContext(connection) as ctx:
                 self.assertEqual(self.get(self.admin1, active='all').status_code, 200)
             return len(ctx)
+        count()  # warm-up: the user's first request also writes the `last_seen` heartbeat
         before = count()
         for _ in range(5):
             self.place(self.admin1, 'Dine-In', self.t1, [(self.pasta, 1), (self.tea, 1)])
